@@ -22,7 +22,16 @@ if(WIN32)
     )
 endif()
 
-target_include_directories(GLTFLoader PRIVATE)
+target_include_directories(GLTFLoader PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/tinyGLTF
+)
+
+target_compile_definitions(GLTFLoader PRIVATE
+    -DTINYGLTF_IMPLEMENTATION
+    -DSTB_IMAGE_IMPLEMENTATION
+    -DSTB_IMAGE_WRITE_IMPLEMENTATION
+)
+
 target_link_libraries(GLTFLoader PRIVATE
     glfw
 )
