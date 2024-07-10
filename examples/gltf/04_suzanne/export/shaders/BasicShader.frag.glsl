@@ -8,5 +8,5 @@ uniform highp vec3 color;
 
 void main()
 {
-	FragColor = vec4(color, 1.0); //vec4(vNormal, 1.0);
+	FragColor = vec4(vNormal, 1.0); //vec4(color, 1.0);
 }

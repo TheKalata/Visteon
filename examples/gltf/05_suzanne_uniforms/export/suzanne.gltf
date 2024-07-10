@@ -28,7 +28,7 @@
 					"fragment": "shaders/BasicShader.frag.glsl",
 					"uniforms": [
 						{
-							"name": "time",
+							"name": "iTime",
 							"value": [
 								0.0
 							],
@@ -37,7 +37,7 @@
 						{
 							"name": "baseColor",
 							"value": [
-								0.0,
+								1.0,
 								1.0,
 								0.0,
 								1.0

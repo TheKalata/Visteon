@@ -2,7 +2,88 @@
 #include <GLFW/glfw3.h>
 #include <iostream>
 #include <tiny_gltf.h>
+#include "basic_types.hpp"
 
+std::unordered_map<std::string, float> materialUniformFloats;
+std::unordered_map<std::string, Vector4> materialUniformVector4;
+std::unordered_map<std::string, Vector3> materialUniformVector3;
+std::unordered_map<std::string, Vector2> materialUniformVector2;
+std::unordered_map<std::string, int> materialUniformInts;
+
+
+static void materialSetProperty(std::string uniformName, float value)
+{
+    if (materialUniformFloats.find(uniformName) != materialUniformFloats.end())
+    {
+        materialUniformFloats[uniformName] = value;
+    }
+}
+
+static void materialSetProperty(std::string uniformName, Vector4 value)
+{
+    if (materialUniformVector4.find(uniformName) != materialUniformVector4.end())
+    {
+        materialUniformVector4[uniformName] = value;
+    }
+}
+
+static void materialUpdateProperties(GLuint program)
+{
+    for (auto& uniform : materialUniformFloats)
+    {
+        GLint location = glGetUniformLocation(program, uniform.first.c_str());
+        if(location != -1)
+        {
+            glUniform1f(location, uniform.second);
+        }
+        std::cout << "Uniform " << uniform.first << " = " << uniform.second << std::endl;
+    }
+
+    for (auto& uniform : materialUniformVector4)
+    {
+        GLint location = glGetUniformLocation(program, uniform.first.c_str());
+        if(location != -1)
+        {
+            glUniform4f(location, uniform.second.x, uniform.second.y, uniform.second.z, uniform.second.w);
+        }
+        std::cout << "Uniform " << uniform.first << " = " << uniform.second.x << ", " << uniform.second.y << ", " << uniform.second.z << ", " << uniform.second.w << std::endl;
+    }
+    
+    for (auto& uniform : materialUniformVector3)
+    {
+        GLint location = glGetUniformLocation(program, uniform.first.c_str());
+        if(location != -1)
+        {
+            glUniform3f(location, uniform.second.x, uniform.second.y, uniform.second.z);
+        }
+        std::cout << "Uniform " << uniform.first << " = " << uniform.second.x << ", " << uniform.second.y << ", " << uniform.second.z << std::endl;
+    }
+    
+    for (auto& uniform : materialUniformVector2)
+    {
+        GLint location = glGetUniformLocation(program, uniform.first.c_str());
+        if(location != -1)
+        {
+            glUniform2f(location, uniform.second.x, uniform.second.y);
+        }
+        std::cout << "Uniform " << uniform.first << " = " << uniform.second.x << ", " << uniform.second.y << std::endl;
+    }
+    
+    for (auto& uniform : materialUniformInts)
+    {
+        GLint location = glGetUniformLocation(program, uniform.first.c_str());
+        if(location != -1)
+        {
+            glUniform1i(location, uniform.second);
+        }
+        std::cout << "Uniform " << uniform.first << " = " << uniform.second << std::endl;
+    }
+}
+
+static float getCurretnTime()
+{
+    return (float)glfwGetTime();
+}
 
 GLuint loadShadersTriangle(tinygltf::Model& model, std::filesystem::path& gltfDirectory, unsigned int materialIndex)
 {
@@ -13,6 +94,7 @@ GLuint loadShadersTriangle(tinygltf::Model& model, std::filesystem::path& gltfDi
     const char* defaultFragmentShaderSource = 
         #include "fragmentShader.glsl"
         ;
+
 
     std::filesystem::path vertexShaderPath;
     std::filesystem::path fragmentShaderPath;
@@ -26,15 +108,75 @@ GLuint loadShadersTriangle(tinygltf::Model& model, std::filesystem::path& gltfDi
         if (gltfShaderExtras.Has("shader"))
         {
             auto gltfShader = gltfShaderExtras.Get("shader");
+
             if (gltfShader.Has("vertex"))
             {
                 std::string vertexShaderFile = gltfShader.Get("vertex").Get<std::string>();
                 vertexShaderPath = gltfDirectory / vertexShaderFile;
             }
+
             if (gltfShader.Has("fragment"))
             {
                 std::string fragmentShaderFile = gltfShader.Get("fragment").Get<std::string>();
                 fragmentShaderPath = gltfDirectory / fragmentShaderFile;
+            }
+
+            if (gltfShader.Has("uniforms"))
+            {
+                auto gltfUniforms = gltfShader.Get("uniforms");
+
+                for (int uniformIndex = 0; uniformIndex < gltfUniforms.ArrayLen(); uniformIndex++)
+                {
+                    auto uniform = gltfUniforms.Get(uniformIndex);
+                    std::string uniformName;
+
+                    if (uniform.Has("name"))
+                    {
+                        uniformName = uniform.Get("name").Get<std::string>();
+                    }
+
+                    if (uniform.Has("type"))
+                    {
+                        std::string type = uniform.Get("type").Get<std::string>();
+                        auto uniformValue = uniform.Get("value");
+                        if (type == "Float")
+                        {
+                            double uniformValueFloat = uniformValue.Get(0).Get<double>();
+                            materialUniformFloats[uniformName] = uniformValueFloat;
+                            std::cout << "uniform " << uniformName << " = " << uniformValueFloat << std::endl;
+                        }
+                        else if (type == "Vector4")
+                        {
+                            double uniformValueFloatX = uniformValue.Get(0).Get<double>();
+                            double uniformValueFloatY = uniformValue.Get(1).Get<double>();
+                            double uniformValueFloatZ = uniformValue.Get(2).Get<double>();
+                            double uniformValueFloatW = uniformValue.Get(3).Get<double>();
+                            materialUniformVector4[uniformName] = Vector4(uniformValueFloatX, uniformValueFloatY, uniformValueFloatZ, uniformValueFloatW);
+                            std::cout << "uniform " << uniformName << " = " << uniformValueFloatX << ", " << uniformValueFloatY << ", " << uniformValueFloatZ << ", " << uniformValueFloatW << std::endl;
+                        }
+                        else if (type == "Vector3")
+                        {
+                            double uniformValueFloatX = uniformValue.Get(0).Get<double>();
+                            double uniformValueFloatY = uniformValue.Get(1).Get<double>();
+                            double uniformValueFloatZ = uniformValue.Get(2).Get<double>();
+                            materialUniformVector3[uniformName] = Vector3(uniformValueFloatX, uniformValueFloatY, uniformValueFloatZ);
+                            std::cout << "uniform " << uniformName << " = " << uniformValueFloatX << ", " << uniformValueFloatY << ", " << uniformValueFloatZ << std::endl;
+                        }
+                        else if (type == "Vector2")
+                        {
+                            double uniformValueFloatX = uniformValue.Get(0).Get<double>();
+                            double uniformValueFloatY = uniformValue.Get(1).Get<double>();
+                            materialUniformVector2[uniformName] = Vector2(uniformValueFloatX, uniformValueFloatY);
+                            std::cout << "uniform " << uniformName << " = " << uniformValueFloatX << ", " << uniformValueFloatY << std::endl;
+                        }
+                        else if (type == "Int")
+                        {
+                            int uniformValueInt = uniformValue.Get(0).Get<int>();
+                            materialUniformInts[uniformName] = uniformValueInt;
+                            std::cout << "uniform " << uniformName << " = " << uniformValueInt << std::endl;
+                        }
+                    }
+                }
             }
         }
     }
@@ -118,85 +260,12 @@ GLuint loadShadersTriangle(tinygltf::Model& model, std::filesystem::path& gltfDi
     return program;
 }
 
-void loadShadersHollowIndicator()
-{
-    const char* vertexShaderSource = R"(
-        #version 300 es
-
-        layout(location = 0) in vec3 position;
-        void main()
-        {
-            gl_Position = vec4(position, 1.0);
-        }
-    )";
-
-    const char* fragmentShaderSource = R"(
-        #version 300 es
-
-        precision mediump float;
-        out mediump vec4 fragColor;
-        void main()
-        {
-            fragColor = vec4(0.0, 0.0, 0.0, 1.0);
-        }
-    )";
-
-    GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vertexShader, 1, &vertexShaderSource, nullptr);
-
-    GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragmentShader, 1, &fragmentShaderSource, nullptr);
-
-    glCompileShader(vertexShader);
-    GLint status;
-    glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &status);
-    if(status == GL_FALSE)
-    {
-        GLint infoLogLength;
-        glGetShaderiv(vertexShader, GL_INFO_LOG_LENGTH, &infoLogLength);
-        std::vector<char> infoLog(infoLogLength);
-        glGetShaderInfoLog(vertexShader, infoLogLength, nullptr, infoLog.data());
-        std::cerr << "Failed to compile vertex shader: " << infoLog.data() << std::endl;
-        return;
-    }
-
-    glCompileShader(fragmentShader);
-    glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &status);
-    if(status == GL_FALSE)
-    {
-        GLint infoLogLength;
-        glGetShaderiv(fragmentShader, GL_INFO_LOG_LENGTH, &infoLogLength);
-        std::vector<char> infoLog(infoLogLength);
-        glGetShaderInfoLog(fragmentShader, infoLogLength, nullptr, infoLog.data());
-        std::cerr << "Failed to compile fragment shader: " << infoLog.data() << std::endl;
-        return;
-    }
-    
-
-    GLuint program = glCreateProgram();
-    glAttachShader(program, vertexShader);
-    glAttachShader(program, fragmentShader);
-
-    glLinkProgram(program);
-    glGetProgramiv(program, GL_LINK_STATUS, &status);
-    if(status == GL_FALSE)
-    {
-        GLint infoLogLength;
-        glGetProgramiv(program, GL_INFO_LOG_LENGTH, &infoLogLength);
-        std::vector<char> infoLog(infoLogLength);
-        glGetProgramInfoLog(program, infoLogLength, nullptr, infoLog.data());
-        std::cerr << "Failed to link program: " << infoLog.data() << std::endl;
-        return;
-    }
-
-    glUseProgram(program);
-}
 
 int main(void)
 {
     GLFWwindow* window;
 
-    std::string gltfFilename = "../examples/gltf/04_suzanne/export/suzanne.gltf";
+    std::string gltfFilename = "../examples/gltf/05_suzanne_uniforms/export/suzanne.gltf";
 
     tinygltf::Model model;
     tinygltf::TinyGLTF loader;
@@ -211,18 +280,13 @@ int main(void)
         return 1;
     }
 
-    //GLfloat vertices[] = {
-    //    -0.5f, -0.5f, 0.0f, //1. coordinate
-    //    0.5f, -0.5f, 0.0f, //2. coordinate
-    //    0.0f,  0.5f, 0.0f //3. coordinate
-    //};
 
     /* Initialize the library */
     if (!glfwInit())
         return -1;
 
     /* Create a windowed mode window and its OpenGL context */
-    window = glfwCreateWindow(640, 480, "MishMash", NULL, NULL);
+    window = glfwCreateWindow(820, 480, "GLTFLoader", NULL, NULL);
     if (!window)
     {
         glfwTerminate();
@@ -291,26 +355,10 @@ int main(void)
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuffer);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, gltfIndicesByteLength, gltfBufferDataIndices + gltfIndicesByteOffset, GL_STATIC_DRAW);
 
-    // GLfloat colorData[] = {
-    //     1.0f, 0.0f, 0.0f, // red
-    //     0.0f, 1.0f, 0.0f, // green
-    //     0.0f, 0.0f, 1.0f, // blue
-    //     // rainbow
-    // };
-
-    // GLuint vertexBufferRainbow = 0;
-    // glGenBuffers(1, &vertexBufferRainbow);
-    // glBindBuffer(GL_ARRAY_BUFFER, vertexBufferRainbow);
-    // glBufferData(GL_ARRAY_BUFFER, sizeof(colorData), colorData, GL_STATIC_DRAW);
-
 
     GLuint vertexArrayObject1 = 0;
     glGenVertexArrays(1, &vertexArrayObject1);
     glBindVertexArray(vertexArrayObject1);
-
-    GLuint vertexArrayObject2 = 0;
-    glGenVertexArrays(1, &vertexArrayObject2);
-    glBindVertexArray(vertexArrayObject2);
 
     glBindBuffer(GL_ARRAY_BUFFER,0);
 
@@ -321,8 +369,8 @@ int main(void)
     while (!glfwWindowShouldClose(window))
     {
         /* Render here */
-        glClearColor(0.75f, 0.75f, 0.75f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
+        // glClearColor(0.75f, 0.75f, 0.75f, 1.0f);
+        // glClear(GL_COLOR_BUFFER_BIT);
 
         GLuint program = loadShadersTriangle(model, gltfDirectory,0);
 
@@ -338,50 +386,13 @@ int main(void)
         glEnableVertexAttribArray(2);
         glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, 0);
 
-        // glBindBuffer(GL_ARRAY_BUFFER, vertexBufferRainbow);
-        // glEnableVertexAttribArray(3);
-        // glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 0, 0);
-
         glBindVertexArray(vertexArrayObject1);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuffer);
 
-        GLint uniformLocationColor = glGetUniformLocation(program, "color");
-        if(uniformLocationColor != -1)
-        {
-            glUniform3f(uniformLocationColor, 1.0f, 0.0f, 0.0f);
-        }
+        materialSetProperty("iTime", getCurretnTime());
+        materialUpdateProperties(program);
 
         glDrawElements(GL_TRIANGLES, indicesCount, GL_UNSIGNED_SHORT, nullptr);
-
-        //glBindBuffer(GL_ARRAY_BUFFER, positionBuffer);
-        //glEnableVertexAttribArray(2);
-        //glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
-
-        //glBindBuffer(GL_ARRAY_BUFFER, normalBuffer);
-        //glEnableVertexAttribArray(1);
-        //glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
-
-        //glBindBuffer(GL_ARRAY_BUFFER, texcoordBuffer);
-        //glEnableVertexAttribArray(0);
-        //glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE,0, 0);
-
-        //glBindVertexArray(vertexArrayObject2);
-        //glDrawArrays(GL_TRIANGLES, 0, 3);  
-        
-
-        // hollow indicator
-        glUseProgram(0);
-        loadShadersHollowIndicator();
-        glLineWidth(10.f);
-        glBegin(GL_LINE_LOOP);
-        glVertex2f(0.0f, 0.5f);
-        glVertex2f(0.5f, 1.0f);
-        glVertex2f(0.5f, 0.75f);
-        glVertex2f(1.0f, 0.75f);
-        glVertex2f(1.0f, 0.25f);
-        glVertex2f(0.5f, 0.25f);
-        glVertex2f(0.5f, 0.0f);
-        glEnd();
 
         /* Swap front and back buffers */
         glfwSwapBuffers(window);
