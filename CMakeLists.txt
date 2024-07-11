@@ -5,17 +5,18 @@ project(GLTFLOADER VERSION 1.0)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
+set(GLFW_BUILD_X11 OFF)
 
 add_executable(GLTFLoader
     src/main.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/glad/src/glad.c
 )
 
-set(GLFW_BUILD_WAYLANT ON)
+set(GLFW_BUILD_WAYLAND ON)
 
 add_subdirectory(thirdparty/glfw/)
 
-if(WIN32)
+if(true)
 
     target_include_directories(GLTFLoader PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/glad/include
